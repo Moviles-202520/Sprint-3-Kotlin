@@ -1,6 +1,8 @@
 package com.example.sprint_2_kotlin.view
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ProfileScreen(
     onLogout: () -> Unit = {},
@@ -29,11 +31,31 @@ fun ProfileScreen(
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Activity", "Achievements", "Settings", "Bookmarks")
 
+    // Admin panel states
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var showAdminPanel by remember { mutableStateOf(false) }
+    var tapCount by remember { mutableStateOf(0) }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.combinedClickable(
+                            onClick = {
+                                tapCount++
+                                if (tapCount >= 3) {
+                                    showPasswordDialog = true
+                                    tapCount = 0
+                                }
+                            },
+                            onLongClick = {
+                                showPasswordDialog = true
+                                tapCount = 0
+                            }
+                        )
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Shield,
                             contentDescription = "Logo",
@@ -94,7 +116,9 @@ fun ProfileScreen(
             contentPadding = PaddingValues(16.dp)
         ) {
             item {
-                UserProfileCard()
+                UserProfileCard(
+                    onAdminClick = { showPasswordDialog = true }
+                )
                 Spacer(Modifier.height(16.dp))
             }
 
@@ -143,10 +167,34 @@ fun ProfileScreen(
             }
         }
     }
+
+    // Admin Password Dialog
+    if (showPasswordDialog) {
+        AdminPasswordDialog(
+            onDismiss = { showPasswordDialog = false },
+            onPasswordCorrect = {
+                showPasswordDialog = false
+                showAdminPanel = true
+            }
+        )
+    }
+
+    // Admin Analytics Panel
+    if (showAdminPanel) {
+        AdminAnalyticsDialog(
+            onDismiss = { showAdminPanel = false },
+            onLogout = {
+                showAdminPanel = false
+                onLogout()
+            }
+        )
+    }
 }
 
 @Composable
-fun UserProfileCard() {
+fun UserProfileCard(
+    onAdminClick: () -> Unit = {}
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -222,6 +270,26 @@ fun UserProfileCard() {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text("Edit profile", fontSize = 14.sp)
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // 🧪 BOTÓN DE TESTING - FUNCIONAL AHORA
+            Button(
+                onClick = onAdminClick,
+                modifier = Modifier.fillMaxWidth(0.7f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF9C27B0)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AdminPanelSettings,
+                    contentDescription = "Admin",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("🧪 Admin Analytics", fontSize = 14.sp)
             }
         }
     }
@@ -454,3 +522,15 @@ fun ProfileBottomNavigationBar(
         )
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
