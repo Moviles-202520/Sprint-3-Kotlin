@@ -1,0 +1,1 @@
+aqui van todos los viewmodels, la interaccion entre repository y view
