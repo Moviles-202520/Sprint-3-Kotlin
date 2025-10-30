@@ -1,1 +1,0 @@
-aqui van todas las vistas y fragments
