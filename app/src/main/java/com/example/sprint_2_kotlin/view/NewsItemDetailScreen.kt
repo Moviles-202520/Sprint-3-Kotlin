@@ -136,12 +136,23 @@ fun NewsItemDetailScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    Box() {
+                        CommentSection(userProfileId = userProfileId, newsItemId = newsItemId)
+
+
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     Text(
                         text = "Ratings & Comments",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
+
+
+
                 }
 
                 // Ratings list
@@ -150,8 +161,12 @@ fun NewsItemDetailScreen(
                     Spacer(modifier = Modifier.height(10.dp))
                 }
 
+
+
+
                 item { Spacer(modifier = Modifier.height(32.dp)) }
             }
+
         } ?: run {
             // Loading state while fetching news item
             Box(
@@ -183,14 +198,11 @@ fun CommentSection(viewModel: NewsItemDetailViewModel = androidx.lifecycle.viewm
         }
 
         AnimatedVisibility(isExpanded) {
-            Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+            Card(Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp)) {
                 Column(Modifier.padding(16.dp)) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Nombre (opcional)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+
 
                     Spacer(Modifier.height(8.dp))
 
@@ -207,7 +219,7 @@ fun CommentSection(viewModel: NewsItemDetailViewModel = androidx.lifecycle.viewm
                     Spacer(Modifier.height(12.dp))
 
                     Text(
-                        text = "Valor: ${"%.2d".format(rating)}",
+                        text = "Valor: ${"%.2f".format(rating)}",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Slider(
@@ -246,7 +258,8 @@ fun CommentSection(viewModel: NewsItemDetailViewModel = androidx.lifecycle.viewm
                     }
                 }
             }
-        }
+
+      }
     }
 }
 

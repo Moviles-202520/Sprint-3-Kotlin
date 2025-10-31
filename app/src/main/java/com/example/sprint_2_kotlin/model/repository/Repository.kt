@@ -1,5 +1,7 @@
 package com.example.sprint_2_kotlin.model.repository
 
+import android.util.Log
+import androidx.compose.runtime.rememberCoroutineScope
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.model.data.RatingItem
 import io.github.jan.supabase.SupabaseClient
@@ -9,6 +11,10 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.result.PostgrestResult
+
+
 
 class Repository {
 
@@ -114,16 +120,17 @@ class Repository {
 
 
         return try {
-            val newcomment = RatingItem(
-                user_profile_id = userProfileId,
-                assigned_reliability_score = rating,
-                comment_text = comment,
-                news_item_id = newsItemId,
-                is_completed = false
+
+            val datos = RatingItem(
+                 newsItemId,
+                 userProfileId,
+                rating,
+                comment,
+                 "02/06/2024",
+                completed
             )
 
-
-            client.postgrest["rating_items"].insert(newcomment)
+            client.from("rating_items").insert(datos){}
 
 
         } catch (e: Exception) {
