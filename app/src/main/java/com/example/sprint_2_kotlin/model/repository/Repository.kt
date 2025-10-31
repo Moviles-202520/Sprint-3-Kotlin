@@ -47,7 +47,7 @@ class Repository {
                 this.password = password
             }
             true
-        } catch (e: Exception){
+        } catch (e: Exception) {
             e.printStackTrace()
             false
         }
@@ -103,4 +103,40 @@ class Repository {
             throw Exception("Failed to load news item with id: $newsItemId")
         }
     }
+
+    suspend fun addNewComments(
+        userProfileId: Int,
+        newsItemId: Int,
+        comment: String,
+        rating: Double,
+        completed: Boolean
+    ): Any {
+
+
+        return try {
+            val newcomment = RatingItem(
+                user_profile_id = userProfileId,
+                assigned_reliability_score = rating,
+                comment_text = comment,
+                news_item_id = newsItemId,
+                is_completed = false
+            )
+
+
+            client.postgrest["rating_items"].insert(newcomment)
+
+
+        } catch (e: Exception) {
+
+        }
+    }
+
+    suspend fun updateComment():Any{
+        return try {
+
+        } catch (e: Exception){
+
+        }
+    }
+
 }

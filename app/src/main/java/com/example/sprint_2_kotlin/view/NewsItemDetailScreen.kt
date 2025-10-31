@@ -1,5 +1,6 @@
 package com.example.sprint_2_kotlin.view
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,15 +16,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.sprint_2_kotlin.viewmodel.NewsItemDetailViewModel
+import okhttp3.internal.userAgent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsItemDetailScreen(
+    userProfileId: Int,
     newsItemId: Int,  // 👈 Receive ID instead of full object
     onBackClick: () -> Unit,  // 👈 Add back navigation callback
     viewModel: NewsItemDetailViewModel = viewModel()
@@ -159,3 +165,92 @@ fun NewsItemDetailScreen(
         }
     }
 }
+
+
+@Composable
+fun CommentSection(viewModel: NewsItemDetailViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),userProfileId: Int,
+                   newsItemId: Int) {
+    var isExpanded by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
+    var comment by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf<String?>(null) }
+    var rating by remember {mutableStateOf<Float>(value = 0.5f) }
+
+    Column(Modifier.padding(16.dp)) {
+
+        Button(onClick = { isExpanded = !isExpanded }) {
+            Text(if (isExpanded) "Cancelar" else "Agregar comentario")
+        }
+
+        AnimatedVisibility(isExpanded) {
+            Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                Column(Modifier.padding(16.dp)) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Nombre (opcional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = comment,
+                        onValueChange = { comment = it },
+                        label = { Text("Comentario") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 4
+                    )
+
+
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        text = "Valor: ${"%.2d".format(rating)}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Slider(
+                        value = rating,
+                        onValueChange = { rating = it },
+                        valueRange = 0f..1f,
+                        steps = 99, // Opcional: 0.1 de incremento
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            viewModel.addComment(
+                                userProfileId = userProfileId,
+                                newsItemId = newsItemId,
+                                comment = comment,
+                                onSuccess = {
+                                    message = "Comentario enviado ✅"
+                                    isExpanded = false
+                                    name = ""
+                                    comment = ""
+                                },
+                                onError = { message = "Error al enviar: ${it.message}" },
+                                rating = rating.toDouble()
+                            )
+                        },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Enviar")
+                    }
+
+                    message?.let {
+                        Text(it, color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
