@@ -9,7 +9,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
-
+// Every HTTP query creates a separate thread from the main thread 
 class Repository {
 
     //cliente de supabase
