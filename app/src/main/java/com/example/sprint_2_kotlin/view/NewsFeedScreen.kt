@@ -26,6 +26,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.viewmodel.NewsFeedViewModel
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +38,15 @@ fun NewsFeedScreen(
     viewModel: NewsFeedViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
+    // ============================================
+    // NEW: States for caching and loading
+    // ============================================
     val newsItems by viewModel.newsItems.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val cacheStatus by viewModel.cacheStatus.collectAsState()
+
+    // Existing states
     var selectedCategory by remember { mutableStateOf("All") }
     var searchQuery by remember { mutableStateOf("") }
 
@@ -47,7 +57,8 @@ fun NewsFeedScreen(
                     .fillMaxWidth()
                     .background(Color.White)
             ) {
-                FeedHeader()
+                // NEW: Cache status in header
+                FeedHeader(cacheStatus = cacheStatus)
 
                 SearchBar(
                     query = searchQuery,
@@ -67,31 +78,107 @@ fun NewsFeedScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = modifier
-                .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
-                .padding(paddingValues),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+        // ============================================
+        // NEW: SwipeRefresh wrapper for pull-to-refresh
+        // ============================================
+        SwipeRefresh(
+            state = rememberSwipeRefreshState(isRefreshing),
+            onRefresh = { viewModel.refreshNewsFeed() }, // NEW: Pull-to-refresh
+            modifier = Modifier.padding(paddingValues)
         ) {
-            item {
-                MisinformationAlert()
-                Spacer(modifier = Modifier.height(16.dp))
-            }
+            if (isLoading && newsItems.isEmpty()) {
+                // NEW: Loading state for first load
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            "Loading news...",
+                            color = Color(0xFF666666),
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            } else if (newsItems.isEmpty() && !isLoading) {
+                // NEW: Empty state
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = "No news",
+                            modifier = Modifier.size(64.dp),
+                            tint = Color(0xFFAAAAAA)
+                        )
+                        Text(
+                            "No news available",
+                            fontSize = 16.sp,
+                            color = Color(0xFF666666)
+                        )
+                        Button(
+                            onClick = { viewModel.refreshNewsFeed() },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF1A1A1A)
+                            )
+                        ) {
+                            Icon(Icons.Default.Refresh, "Refresh")
+                            Spacer(Modifier.width(8.dp))
+                            Text("Refresh")
+                        }
+                    }
+                }
+            } else {
+                // Existing news list
+                LazyColumn(
+                    modifier = modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFF5F5F5)),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    item {
+                        MisinformationAlert()
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
 
-            items(newsItems) { item ->
-                NewsCard(
-                    item = item,
-                    onClick = { onNewsItemClick(item.news_item_id) }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+                    items(newsItems, key = { it.news_item_id }) { item ->
+                        NewsCard(
+                            item = item,
+                            onClick = { onNewsItemClick(item.news_item_id) }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // NEW: Cache info footer
+                    if (newsItems.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "📦 Using cached data for faster loading",
+                                fontSize = 12.sp,
+                                color = Color(0xFF999999),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun FeedHeader() {
+fun FeedHeader(cacheStatus: String = "") { // NEW: cacheStatus parameter
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -99,20 +186,31 @@ fun FeedHeader() {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.Shield,
-                contentDescription = "Logo",
-                modifier = Modifier.size(24.dp),
-                tint = Color(0xFF1A1A1A)
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "Punto Neutro",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A1A)
-            )
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Shield,
+                    contentDescription = "Logo",
+                    modifier = Modifier.size(24.dp),
+                    tint = Color(0xFF1A1A1A)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Punto Neutro",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A1A1A)
+                )
+            }
+            // NEW: Cache status display
+            if (cacheStatus.isNotEmpty()) {
+                Text(
+                    text = cacheStatus,
+                    fontSize = 11.sp,
+                    color = Color(0xFF999999),
+                    modifier = Modifier.padding(start = 32.dp, top = 2.dp)
+                )
+            }
         }
 
         Box {

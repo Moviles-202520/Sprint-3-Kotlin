@@ -2,8 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-
-    kotlin("plugin.serialization") version "2.2.0"}
+    kotlin("kapt") // ⬅️ FORMATO CORRECTO - Plugin de KAPT para Room
+    kotlin("plugin.serialization") version "2.2.0"
+}
 
 android {
     namespace = "com.example.sprint_2_kotlin"
@@ -63,6 +64,26 @@ dependencies {
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
+
+    // ========================================
+    // ROOM DATABASE (CACHING)
+    // ========================================
+    implementation("androidx.room:room-runtime:2.7.0-alpha12")
+    implementation("androidx.room:room-ktx:2.7.0-alpha12")
+    kapt("androidx.room:room-compiler:2.7.0-alpha12")
+
+    // ========================================
+    // COROUTINES (para operaciones async)
+    // ========================================
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+
+    // ========================================
+    // PULL-TO-REFRESH
+    // ========================================
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.32.0")
+
     // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation(libs.androidx.core.ktx)
