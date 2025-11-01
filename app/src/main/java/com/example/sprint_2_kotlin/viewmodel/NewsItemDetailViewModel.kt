@@ -3,14 +3,19 @@ package com.example.sprint_2_kotlin.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.sprint_2_kotlin.model.data.AppDatabase
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.model.data.RatingItem
 import com.example.sprint_2_kotlin.model.data.UserProfile
+import com.example.sprint_2_kotlin.model.network.NetworkStatusTracker
 import com.example.sprint_2_kotlin.model.repository.Repository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import utils.NetworkMonitor
 
 /**
  * NewsItemDetailViewModel
@@ -21,9 +26,12 @@ class NewsItemDetailViewModel(
     application: Application // CAMBIO: ahora recibe Application
 ) : AndroidViewModel(application) { //  CAMBIO: extiende AndroidViewModel
 
+    private val _isConnected = MutableStateFlow(true)
+    val isConnected: StateFlow<Boolean> get() = _isConnected
     // CAMBIO: Repository ahora recibe context
-    private val repository = Repository(application.applicationContext)
-
+    private val dao = AppDatabase.getDatabase(application).CommentDao()
+    // CAMBIO: Repository ahora recibe context
+    private val repository = Repository(application.applicationContext, dao)
     private val _newsItem = MutableStateFlow<NewsItem?>(null)
     val newsItem: StateFlow<NewsItem?> = _newsItem.asStateFlow()
 
@@ -75,6 +83,25 @@ class NewsItemDetailViewModel(
              repository.addNewComments(userProfileId,newsItemId, comment = comment, rating = rating, completed = false)
             } catch (e: Exception) {
 
+            }
+        }
+    }
+
+    fun startSync(networkMonitor: NetworkMonitor) {
+        viewModelScope.launch {
+            networkMonitor.isConnected.collect { connected ->
+                _isConnected.value = connected
+                if (connected) repository.syncPendingComments()
+            }
+        }
+    }
+
+    fun startNetworkObserver(networkMonitor: NetworkMonitor) {
+        viewModelScope.launch {
+            networkMonitor.isConnected.collect { connected ->
+                if (connected) {
+                    startSync(networkMonitor)
+                }
             }
         }
     }

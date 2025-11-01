@@ -6,8 +6,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.sprint_2_kotlin.model.data.AppDatabase
 import com.example.sprint_2_kotlin.model.data.RatingDistributionData
+import com.example.sprint_2_kotlin.model.network.NetworkStatusTracker
 import com.example.sprint_2_kotlin.model.repository.Repository
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -16,7 +21,9 @@ import kotlinx.coroutines.launch
  */
 class RatingDistributionViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = Repository(application)
+    private val dao = AppDatabase.getDatabase(application).CommentDao()
+    // CAMBIO: Repository ahora recibe context
+    private val repository = Repository(application.applicationContext, dao)
 
     // Estados
     var distributionData by mutableStateOf<RatingDistributionData?>(null)
