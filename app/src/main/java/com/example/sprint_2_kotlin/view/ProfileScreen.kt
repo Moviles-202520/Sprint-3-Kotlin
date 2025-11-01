@@ -522,7 +522,87 @@ fun ProfileBottomNavigationBar(
         )
     }
 }
+// ============================================
+// ADMIN PASSWORD DIALOG
+// ============================================
 
+/**
+ * Password Dialog for Admin Access
+ * Required for accessing Admin Analytics Panel
+ */
+@Composable
+fun AdminPasswordDialog(
+    onDismiss: () -> Unit,
+    onPasswordCorrect: () -> Unit
+) {
+    var password by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
+    val correctPassword = "admin123"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = "Lock",
+                tint = Color(0xFF1A1A1A),
+                modifier = Modifier.size(32.dp)
+            )
+        },
+        title = {
+            Text(
+                text = "Admin Access Required",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text("Enter admin password to view analytics:")
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        showError = false
+                    },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    isError = showError,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (showError) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Incorrect password. Try 'admin123'",
+                        color = Color(0xFFE53935),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (password == correctPassword) {
+                        onPasswordCorrect()
+                    } else {
+                        showError = true
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1A1A1A)
+                )
+            ) {
+                Text("Access")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
 
 
 

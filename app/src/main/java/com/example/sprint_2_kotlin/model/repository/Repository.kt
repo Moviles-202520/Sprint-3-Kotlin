@@ -73,7 +73,7 @@ class Repository(private val context: Context) {
                 this.password = password
             }
             true
-        } catch (e: Exception){
+        } catch (e: Exception) {
             e.printStackTrace()
             false
         }
@@ -281,5 +281,129 @@ class Repository(private val context: Context) {
         val expirationTimestamp = System.currentTimeMillis() - CACHE_EXPIRATION_TIME
         newsItemDao.deleteOldCachedItems(expirationTimestamp)
         Log.d(TAG, "Expired cache items deleted")
+    }
+// ============================================
+    // BUSINESS QUESTION #4: RATING DISTRIBUTION
+    // ============================================
+
+    /**
+     * NEW: Get rating distribution by category
+     * Business Question #4: Distribution of ratings across categories
+     *
+     * @return Result with RatingDistributionData or error
+     */
+    suspend fun getRatingDistributionByCategory(): Result<RatingDistributionData> {
+        return withContext(Dispatchers.IO) {
+            try {
+                // TODO: For production, implement real Supabase query
+                // Query example (when ready):
+                // val response = client.postgrest.rpc("get_rating_distribution").execute()
+
+                // For now, use mock data for rapid development
+                val mockDistributions = getMockDistributionData()
+
+                Log.d(
+                    TAG,
+                    "Rating distribution loaded: ${mockDistributions.distributions.size} categories"
+                )
+                Result.success(mockDistributions)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading rating distribution", e)
+                Result.failure(e)
+            }
+        }
+    }
+
+    /**
+     * NEW: Generate mock distribution data
+     * This provides realistic data for development/testing
+     * Replace with real Supabase query in production
+     */
+    private fun getMockDistributionData(): RatingDistributionData {
+        val distributions = listOf(
+            CategoryRatingDistribution(
+                category = "Technology",
+                avgVeracityRating = 4.2,
+                avgPoliticalBiasRating = 5.0,
+                ratingCount = 245,
+                veracity1Star = 8,
+                veracity2Star = 12,
+                veracity3Star = 45,
+                veracity4Star = 98,
+                veracity5Star = 82,
+                biasLeftCount = 35,
+                biasCenterCount = 180,
+                biasRightCount = 30
+            ),
+            CategoryRatingDistribution(
+                category = "Politics",
+                avgVeracityRating = 2.8,
+                avgPoliticalBiasRating = -25.0,
+                ratingCount = 312,
+                veracity1Star = 45,
+                veracity2Star = 78,
+                veracity3Star = 112,
+                veracity4Star = 52,
+                veracity5Star = 25,
+                biasLeftCount = 145,
+                biasCenterCount = 98,
+                biasRightCount = 69
+            ),
+            CategoryRatingDistribution(
+                category = "Health",
+                avgVeracityRating = 3.9,
+                avgPoliticalBiasRating = 2.0,
+                ratingCount = 189,
+                veracity1Star = 12,
+                veracity2Star = 18,
+                veracity3Star = 34,
+                veracity4Star = 78,
+                veracity5Star = 47,
+                biasLeftCount = 42,
+                biasCenterCount = 125,
+                biasRightCount = 22
+            ),
+            CategoryRatingDistribution(
+                category = "Security",
+                avgVeracityRating = 3.5,
+                avgPoliticalBiasRating = 15.0,
+                ratingCount = 156,
+                veracity1Star = 18,
+                veracity2Star = 25,
+                veracity3Star = 52,
+                veracity4Star = 42,
+                veracity5Star = 19,
+                biasLeftCount = 28,
+                biasCenterCount = 95,
+                biasRightCount = 33
+            ),
+            CategoryRatingDistribution(
+                category = "Sports",
+                avgVeracityRating = 4.5,
+                avgPoliticalBiasRating = 0.0,
+                ratingCount = 98,
+                veracity1Star = 3,
+                veracity2Star = 5,
+                veracity3Star = 12,
+                veracity4Star = 38,
+                veracity5Star = 40,
+                biasLeftCount = 18,
+                biasCenterCount = 68,
+                biasRightCount = 12
+            )
+        )
+
+        val statistics = RatingStatistics(
+            totalRatings = distributions.sumOf { it.ratingCount },
+            avgVeracity = distributions.map { it.avgVeracityRating }.average(),
+            avgBias = distributions.map { it.avgPoliticalBiasRating }.average(),
+            mostRatedCategory = distributions.maxByOrNull { it.ratingCount }?.category ?: "N/A",
+            mostCredibleCategory = distributions.maxByOrNull { it.avgVeracityRating }?.category
+                ?: "N/A",
+            mostBiasedCategory = distributions.maxByOrNull { kotlin.math.abs(it.avgPoliticalBiasRating) }?.category
+                ?: "N/A"
+        )
+
+        return RatingDistributionData(distributions, statistics)
     }
 }
