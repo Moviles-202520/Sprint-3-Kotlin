@@ -1,5 +1,11 @@
 package com.example.sprint_2_kotlin.model.repository
 
+import android.icu.text.DecimalFormat
+import android.util.Log
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.sprint_2_kotlin.model.data.NewsItem
+import com.example.sprint_2_kotlin.model.data.RatingItem
+import com.example.sprint_2_kotlin.model.data.UserProfile
 import android.content.Context
 import android.util.Log
 import com.example.sprint_2_kotlin.model.data.*
@@ -10,6 +16,10 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.result.PostgrestResult
+import java.math.RoundingMode
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -73,7 +83,7 @@ class Repository(private val context: Context) {
                 this.password = password
             }
             true
-        } catch (e: Exception){
+        } catch (e: Exception) {
             e.printStackTrace()
             false
         }
@@ -130,6 +140,56 @@ class Repository(private val context: Context) {
         }
     }
 
+    suspend fun addNewComments(
+        userProfileId: Int,
+        newsItemId: Int,
+        comment: String,
+        rating: Double,
+        completed: Boolean
+    ): Any {
+
+
+        return try {
+            val user = client.auth.currentUserOrNull()!!.id
+            val response = client
+                .from("user_profiles").select(){ filter { eq("user_auth_id",user) } }
+            val profiles = response.decodeList<UserProfile>()
+
+
+            val profile = profiles.first()
+            val userProfileId = profile.user_profile_id //  este es el que usarás en tus inserts
+
+            val scaledValue = rating * 100
+            val truncatedValue = kotlin.math.floor(scaledValue) // Usa floor para truncar, como en la versión de Python (data-camp.com/es/tutorial/python-round-to-two-decimal-places)
+            val ratingf = truncatedValue / 100
+
+
+
+            val datos = RatingItem(
+                  newsItemId,
+                  userProfileId,
+                 ratingf,
+                 comment,
+                 true
+            )
+
+            client.from("rating_items").insert(listOf(datos)){}
+
+
+        } catch (e: Exception) {
+
+        }
+    }
+
+    suspend fun updateComment():Any{
+        return try {
+
+        } catch (e: Exception){
+
+        }
+    }
+
+}
     // ============================================
     // NEW: CACHE-FIRST FUNCTIONS FOR NEWS FEED
     // ============================================

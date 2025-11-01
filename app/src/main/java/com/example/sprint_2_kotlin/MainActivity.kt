@@ -161,9 +161,11 @@ class MainActivity : FragmentActivity() {
                             }
                         ) { backStackEntry ->
                             val newsItemId = backStackEntry.arguments?.getInt("newsItemId") ?: 0
+                            val userProfileId = backStackEntry.arguments?.getInt(  "userProfileId")?:0
 
                             NewsItemDetailScreen(
                                 newsItemId = newsItemId,
+                                userProfileId = userProfileId,
                                 onBackClick = {
                                     navController.popBackStack()
                                 }
