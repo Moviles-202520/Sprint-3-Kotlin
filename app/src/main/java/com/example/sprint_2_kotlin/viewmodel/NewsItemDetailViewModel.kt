@@ -1,6 +1,7 @@
 package com.example.sprint_2_kotlin.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.model.data.RatingItem
@@ -11,9 +12,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * NewsItemDetailViewModel
+ *
+ * CHANGE: Now extends AndroidViewModel to pass context to Repository
+ */
 class NewsItemDetailViewModel(
-    private val repository: Repository = Repository()
-) : ViewModel() {
+    application: Application // CAMBIO: ahora recibe Application
+) : AndroidViewModel(application) { //  CAMBIO: extiende AndroidViewModel
+
+    // CAMBIO: Repository ahora recibe context
+    private val repository = Repository(application.applicationContext)
 
     private val _newsItem = MutableStateFlow<NewsItem?>(null)
     val newsItem: StateFlow<NewsItem?> = _newsItem.asStateFlow()
@@ -31,7 +40,7 @@ class NewsItemDetailViewModel(
         loadRatings(newsItem.news_item_id)
     }
 
-    // 👈 NEW: Load news item by ID
+    // Load news item by ID
     fun loadNewsItemById(newsItemId: Int) {
         viewModelScope.launch {
             try {
@@ -70,3 +79,14 @@ class NewsItemDetailViewModel(
         }
     }
 }
+}
+
+
+
+
+
+
+
+
+
+
