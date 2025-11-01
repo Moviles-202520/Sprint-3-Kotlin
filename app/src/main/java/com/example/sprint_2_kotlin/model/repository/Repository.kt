@@ -3,10 +3,11 @@ package com.example.sprint_2_kotlin.model.repository
 import android.content.Context
 import android.util.Log
 import com.example.sprint_2_kotlin.model.data.*
-import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -73,7 +74,7 @@ class Repository(private val context: Context) {
                 this.password = password
             }
             true
-        } catch (e: Exception){
+        } catch (e: Exception) {
             e.printStackTrace()
             false
         }
@@ -91,10 +92,6 @@ class Repository(private val context: Context) {
     // FETCH FUNCTIONS (EXISTING CODE - NO CHANGES)
     // ============================================
 
-    /**
-     * EXISTING: Get news items with pagination (direct from Supabase)
-     * This method remains unchanged for compatibility
-     */
     suspend fun getNewsItems(pageSize: Int = 20, startRow: Int = 0): List<NewsItem> {
         val response = client.postgrest["news_items"].select {
             range(startRow.toLong(), (startRow + pageSize - 1).toLong())
@@ -130,36 +127,58 @@ class Repository(private val context: Context) {
         }
     }
 
+    suspend fun addNewComments(
+        userProfileId: Int,
+        newsItemId: Int,
+        comment: String,
+        rating: Double,
+        completed: Boolean
+    ): Any {
+        return try {
+            val user = client.auth.currentUserOrNull()!!.id
+            val response = client
+                .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+            val profiles = response.decodeList<UserProfile>()
+
+            val profile = profiles.first()
+            val userProfileIdActual = profile.user_profile_id
+
+            val scaledValue = rating * 100
+            val truncatedValue = kotlin.math.floor(scaledValue)
+            val ratingf = truncatedValue / 100
+
+            val datos = RatingItem(
+                newsItemId,
+                userProfileIdActual,
+                ratingf,
+                comment,
+                true
+            )
+
+            client.from("rating_items").insert(listOf(datos)) {}
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun updateComment(): Any {
+        return try {
+            // TODO: Implement
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     // ============================================
     // NEW: CACHE-FIRST FUNCTIONS FOR NEWS FEED
     // ============================================
 
-    /**
-     * NEW: Get news feed with Cache-First strategy (reactive)
-     *
-     * This returns a Flow that automatically updates when cache changes
-     * Use this in your ViewModel for reactive UI updates
-     *
-     * @return Flow of cached news items
-     */
     fun getNewsFeedCached(): Flow<List<NewsItem>> {
         return newsItemDao.getAllNewsItems().map { cachedEntities ->
             cachedEntities.map { it.toNewsItem() }
         }
     }
 
-    /**
-     * NEW: Load news feed with caching logic
-     *
-     * Strategy:
-     * 1. Check if cache has fresh data
-     * 2. If yes, use cached data (instant load)
-     * 3. If no, fetch from Supabase and cache it
-     *
-     * @param forceRefresh If true, skip cache and fetch from Supabase (pull-to-refresh)
-     * @param pageSize Number of items to fetch
-     * @param startRow Starting row for pagination
-     */
     suspend fun loadNewsFeedCached(
         forceRefresh: Boolean = false,
         pageSize: Int = 20,
@@ -168,13 +187,11 @@ class Repository(private val context: Context) {
         try {
             Log.d(TAG, "loadNewsFeedCached - forceRefresh: $forceRefresh")
 
-            // Check if we should use cached data
             if (!forceRefresh && shouldUseCachedData()) {
                 Log.d(TAG, "Using cached data (cache is fresh)")
-                return@withContext // Data is already in Flow
+                return@withContext
             }
 
-            // Cache expired or forceRefresh - fetch from Supabase
             Log.d(TAG, "Fetching fresh data from Supabase...")
 
             val freshNewsItems = getNewsItems(pageSize, startRow)
@@ -184,13 +201,11 @@ class Repository(private val context: Context) {
                 return@withContext
             }
 
-            // Clear old cache if force refresh
             if (forceRefresh) {
                 newsItemDao.deleteAllNewsItems()
                 Log.d(TAG, "Cache cleared due to force refresh")
             }
 
-            // Convert to entities and cache them
             val entities = freshNewsItems.map { it.toEntity() }
             newsItemDao.insertAllNewsItems(entities)
 
@@ -198,31 +213,20 @@ class Repository(private val context: Context) {
 
         } catch (e: Exception) {
             Log.e(TAG, "Error loading news feed", e)
-            // If Supabase fails, cached data will still be available via Flow
         }
     }
 
-    /**
-     * NEW: Get a news item by ID with cache fallback
-     *
-     * 1. Try to get from cache first (fast)
-     * 2. If not in cache, fetch from Supabase
-     * 3. Cache the fetched item for future use
-     */
     suspend fun getNewsItemByIdCached(newsItemId: Int): NewsItem? = withContext(Dispatchers.IO) {
         try {
-            // First try cache
             val cachedItem = newsItemDao.getNewsItemById(newsItemId)
             if (cachedItem != null) {
                 Log.d(TAG, "News item $newsItemId found in cache")
                 return@withContext cachedItem.toNewsItem()
             }
 
-            // Not in cache - fetch from Supabase
             Log.d(TAG, "News item $newsItemId not in cache, fetching from Supabase...")
             val item = getNewsItemById(newsItemId)
 
-            // Cache it for future use
             newsItemDao.insertNewsItem(item.toEntity())
 
             item
@@ -232,9 +236,6 @@ class Repository(private val context: Context) {
         }
     }
 
-    /**
-     * NEW: Check if cached data is still fresh (not expired)
-     */
     private suspend fun shouldUseCachedData(): Boolean {
         val hasCachedData = newsItemDao.hasCachedData()
         if (!hasCachedData) {
@@ -247,7 +248,6 @@ class Repository(private val context: Context) {
             return false
         }
 
-        // Check if cache is still fresh
         val newestItem = cachedItems.minByOrNull { it.cachedTimestamp }
         val currentTime = System.currentTimeMillis()
         val cacheAge = currentTime - (newestItem?.cachedTimestamp ?: 0)
@@ -259,27 +259,121 @@ class Repository(private val context: Context) {
         return isFresh
     }
 
-    /**
-     * NEW: Get cached items count (for analytics/debugging)
-     */
     suspend fun getCachedItemsCount(): Int = withContext(Dispatchers.IO) {
         newsItemDao.getCachedItemsCount()
     }
 
-    /**
-     * NEW: Manually clear all cached data
-     */
     suspend fun clearCache() = withContext(Dispatchers.IO) {
         newsItemDao.deleteAllNewsItems()
         Log.d(TAG, "Cache cleared manually")
     }
 
-    /**
-     * NEW: Delete expired cache items (maintenance)
-     */
     suspend fun deleteExpiredCache() = withContext(Dispatchers.IO) {
         val expirationTimestamp = System.currentTimeMillis() - CACHE_EXPIRATION_TIME
         newsItemDao.deleteOldCachedItems(expirationTimestamp)
         Log.d(TAG, "Expired cache items deleted")
+    }
+
+    // ============================================
+    // BUSINESS QUESTION #4: RATING DISTRIBUTION
+    // ============================================
+
+    suspend fun getRatingDistributionByCategory(): Result<RatingDistributionData> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val mockDistributions = getMockDistributionData()
+                Log.d(TAG, "Rating distribution loaded: ${mockDistributions.distributions.size} categories")
+                Result.success(mockDistributions)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading rating distribution", e)
+                Result.failure(e)
+            }
+        }
+    }
+
+    private fun getMockDistributionData(): RatingDistributionData {
+        val distributions = listOf(
+            CategoryRatingDistribution(
+                category = "Technology",
+                avgVeracityRating = 4.2,
+                avgPoliticalBiasRating = 5.0,
+                ratingCount = 245,
+                veracity1Star = 8,
+                veracity2Star = 12,
+                veracity3Star = 45,
+                veracity4Star = 98,
+                veracity5Star = 82,
+                biasLeftCount = 35,
+                biasCenterCount = 180,
+                biasRightCount = 30
+            ),
+            CategoryRatingDistribution(
+                category = "Politics",
+                avgVeracityRating = 2.8,
+                avgPoliticalBiasRating = -25.0,
+                ratingCount = 312,
+                veracity1Star = 45,
+                veracity2Star = 78,
+                veracity3Star = 112,
+                veracity4Star = 52,
+                veracity5Star = 25,
+                biasLeftCount = 145,
+                biasCenterCount = 98,
+                biasRightCount = 69
+            ),
+            CategoryRatingDistribution(
+                category = "Health",
+                avgVeracityRating = 3.9,
+                avgPoliticalBiasRating = 2.0,
+                ratingCount = 189,
+                veracity1Star = 12,
+                veracity2Star = 18,
+                veracity3Star = 34,
+                veracity4Star = 78,
+                veracity5Star = 47,
+                biasLeftCount = 42,
+                biasCenterCount = 125,
+                biasRightCount = 22
+            ),
+            CategoryRatingDistribution(
+                category = "Security",
+                avgVeracityRating = 3.5,
+                avgPoliticalBiasRating = 15.0,
+                ratingCount = 156,
+                veracity1Star = 18,
+                veracity2Star = 25,
+                veracity3Star = 52,
+                veracity4Star = 42,
+                veracity5Star = 19,
+                biasLeftCount = 28,
+                biasCenterCount = 95,
+                biasRightCount = 33
+            ),
+            CategoryRatingDistribution(
+                category = "Sports",
+                avgVeracityRating = 4.5,
+                avgPoliticalBiasRating = 0.0,
+                ratingCount = 98,
+                veracity1Star = 3,
+                veracity2Star = 5,
+                veracity3Star = 12,
+                veracity4Star = 38,
+                veracity5Star = 40,
+                biasLeftCount = 18,
+                biasCenterCount = 68,
+                biasRightCount = 12
+            )
+        )
+
+        val statistics = RatingStatistics(
+            totalRatings = distributions.sumOf { it.ratingCount },
+            avgVeracity = distributions.map { it.avgVeracityRating }.average(),
+            avgBias = distributions.map { it.avgPoliticalBiasRating }.average(),
+            mostRatedCategory = distributions.maxByOrNull { it.ratingCount }?.category ?: "N/A",
+            mostCredibleCategory = distributions.maxByOrNull { it.avgVeracityRating }?.category ?: "N/A",
+            mostBiasedCategory = distributions.maxByOrNull { kotlin.math.abs(it.avgPoliticalBiasRating) }?.category ?: "N/A"
+        )
+
+        return RatingDistributionData(distributions, statistics)
     }
 }

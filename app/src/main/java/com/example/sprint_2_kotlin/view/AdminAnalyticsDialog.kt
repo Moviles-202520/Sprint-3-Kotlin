@@ -11,410 +11,691 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.sprint_2_kotlin.viewmodel.RatingDistributionViewModel
 
-// Datos de ejemplo para las sesiones
-data class DeviceSessionData(
-    val deviceType: String,
-    val icon: String,
-    val avgDuration: Double, // en minutos
-    val totalSessions: Int,
-    val percentage: Float,
-    val color: Color
-)
-
-fun getSessionData(): List<DeviceSessionData> {
-    return listOf(
-        DeviceSessionData(
-            deviceType = "Android Devices",
-            icon = "📱",
-            avgDuration = 12.5,
-            totalSessions = 2847,
-            percentage = 0.85f,
-            color = Color(0xFF4CAF50)
-        ),
-        DeviceSessionData(
-            deviceType = "Web Platform",
-            icon = "🌐",
-            avgDuration = 8.2,
-            totalSessions = 1203,
-            percentage = 0.65f,
-            color = Color(0xFF2196F3)
-        ),
-        DeviceSessionData(
-            deviceType = "Desktop",
-            icon = "💻",
-            avgDuration = 6.8,
-            totalSessions = 456,
-            percentage = 0.50f,
-            color = Color(0xFF9C27B0)
-        ),
-        DeviceSessionData(
-            deviceType = "iOS Devices",
-            icon = "🍎",
-            avgDuration = 10.8,
-            totalSessions = 1534,
-            percentage = 0.75f,
-            color = Color(0xFFFF9800)
-        )
-    )
-}
+/**
+ * ACTUALIZACIÓN DEL AdminAnalyticsDialog EXISTENTE
+ * Se agrega nueva tab para Business Question #4
+ */
 
 @Composable
 fun AdminAnalyticsDialog(
     onDismiss: () -> Unit,
     onLogout: () -> Unit
 ) {
+    var selectedTab by remember { mutableStateOf(0) }
+    val tabs = listOf("📊 Session Data", "📈 Rating Distribution")
+
     Dialog(onDismissRequest = onDismiss) {
-        Card(
+        Surface(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.95f)
                 .fillMaxHeight(0.85f),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
+                modifier = Modifier.fillMaxSize()
             ) {
                 // Header
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFF1A1A1A)
+                AdminDialogHeader(onDismiss = onDismiss)
+
+                // Tabs
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.primary
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.AdminPanelSettings,
-                                contentDescription = "Admin",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = "Admin Analytics",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                        IconButton(onClick = onDismiss) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = Color.White
-                            )
-                        }
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = {
+                                Text(
+                                    text = title,
+                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        )
                     }
                 }
 
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Title
-                    item {
-                        Column {
-                            Text(
-                                text = "Average Session Duration",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1A1A1A)
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = "by Device Type & Platform",
-                                fontSize = 14.sp,
-                                color = Color(0xFF666666)
-                            )
-                        }
-                    }
-
-                    // Session Cards
-                    items(getSessionData()) { data ->
-                        SessionDataCard(data)
-                    }
-
-                    // Summary Stats
-                    item {
-                        Spacer(Modifier.height(8.dp))
-                        SummaryStats()
-                    }
+                // Content
+                when (selectedTab) {
+                    0 -> SessionDataTab()
+                    1 -> RatingDistributionTab()
                 }
 
-                // Bottom Actions
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFF5F5F5),
-                    shadowElevation = 8.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = onLogout,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFE53935)
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Logout,
-                                contentDescription = "Logout",
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = "Logout & Return to Login",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-
-                        OutlinedButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Close Panel")
-                        }
-                    }
-                }
+                // Logout Button
+                AdminLogoutButton(onLogout = onLogout)
             }
         }
     }
 }
 
 @Composable
-fun SessionDataCard(data: DeviceSessionData) {
+private fun AdminDialogHeader(onDismiss: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.primaryContainer
+            )
+            .padding(20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = "🔒 Admin Analytics",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Text(
+                text = "Confidential Data Dashboard",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+            )
+        }
+        IconButton(onClick = onDismiss) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+
+// ============================================
+// TAB 1: Session Data (EXISTENTE)
+// ============================================
+@Composable
+private fun SessionDataTab() {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Text(
+                text = "Average Session Duration by Device",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        val sessionData = listOf(
+            SessionData("📱 Android", "12.5 min", Color(0xFF4CAF50)),
+            SessionData("🍎 iOS", "10.8 min", Color(0xFF2196F3)),
+            SessionData("🌐 Web", "8.2 min", Color(0xFFFF9800)),
+            SessionData("💻 Desktop", "6.8 min", Color(0xFF9C27B0))
+        )
+
+        items(sessionData) { data ->
+            SessionCard(data)
+        }
+    }
+}
+
+data class SessionData(val device: String, val duration: String, val color: Color)
+
+@Composable
+private fun SessionCard(data: SessionData) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = data.color.copy(alpha = 0.1f)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = data.device,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = data.duration,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = data.color
+            )
+        }
+    }
+}
+
+// ============================================
+// TAB 2: Rating Distribution (NUEVO - BQ #4)
+// ============================================
+@Composable
+private fun RatingDistributionTab() {
+    val viewModel: RatingDistributionViewModel = viewModel()
+    val data = viewModel.distributionData
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Loading State
+        if (viewModel.isLoading) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            return@LazyColumn
+        }
+
+        // Error State
+        if (viewModel.errorMessage != null) {
+            item {
+                ErrorCard(
+                    message = viewModel.errorMessage!!,
+                    onRetry = { viewModel.refresh() }
+                )
+            }
+            return@LazyColumn
+        }
+
+        // Header with Statistics
+        item {
+            Text(
+                text = "📈 Rating Distribution by Category",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Business Question #4: User-assigned ratings analysis",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+
+        // Global Statistics Card
+        data?.let { distributionData ->
+            item {
+                GlobalStatisticsCard(
+                    statistics = distributionData.statistics,
+                    viewModel = viewModel
+                )
+            }
+
+            item {
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                Text(
+                    text = "📊 Category Breakdown",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Category Cards
+            items(distributionData.distributions) { categoryData ->
+                CategoryDistributionCard(
+                    data = categoryData,
+                    viewModel = viewModel
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlobalStatisticsCard(
+    statistics: com.example.sprint_2_kotlin.model.data.RatingStatistics,
+    viewModel: RatingDistributionViewModel
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Text(
+                text = "🌍 Global Statistics",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatItem(
+                    label = "Total Ratings",
+                    value = statistics.totalRatings.toString(),
+                    icon = "📊"
+                )
+                StatItem(
+                    label = "Avg Veracity",
+                    value = viewModel.formatRating(statistics.avgVeracity),
+                    icon = "⭐"
+                )
+                StatItem(
+                    label = "Avg Bias",
+                    value = viewModel.formatRating(statistics.avgBias),
+                    icon = "⚖️"
+                )
+            }
+
+            Divider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
+            )
+
+            InsightRow(
+                icon = "🏆",
+                label = "Most Rated",
+                value = statistics.mostRatedCategory
+            )
+            InsightRow(
+                icon = "✅",
+                label = "Most Credible",
+                value = statistics.mostCredibleCategory
+            )
+            InsightRow(
+                icon = "📍",
+                label = "Most Biased",
+                value = statistics.mostBiasedCategory
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatItem(label: String, value: String, icon: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = icon,
+            style = MaterialTheme.typography.titleLarge
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
+private fun InsightRow(icon: String, label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = icon, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+            )
+        }
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    }
+}
+
+@Composable
+private fun CategoryDistributionCard(
+    data: com.example.sprint_2_kotlin.model.data.CategoryRatingDistribution,
+    viewModel: RatingDistributionViewModel
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = viewModel.getCategoryColor(data.category).copy(alpha = 0.1f)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Category Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = data.icon,
-                        fontSize = 24.sp
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = data.deviceType,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF1A1A1A)
-                        )
-                        Text(
-                            text = "${data.totalSessions} sessions",
-                            fontSize = 12.sp,
-                            color = Color(0xFF888888)
-                        )
-                    }
-                }
-
+                Text(
+                    text = data.category,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = viewModel.getCategoryColor(data.category)
+                )
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = data.color.copy(alpha = 0.15f)
+                    color = viewModel.getCategoryColor(data.category).copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = "${data.avgDuration} min",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = data.color
+                        text = "${data.ratingCount} ratings",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            // Veracity Rating
+            RatingBar(
+                label = "Veracity",
+                value = data.avgVeracityRating,
+                maxValue = 5.0,
+                color = viewModel.getCategoryColor(data.category),
+                emoji = viewModel.getCredibilityEmoji(data.avgVeracityRating),
+                viewModel = viewModel
+            )
 
-            // Progress Bar
-            Column {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .background(Color(0xFFE0E0E0), RoundedCornerShape(4.dp))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(data.percentage)
-                            .fillMaxHeight()
-                            .background(data.color, RoundedCornerShape(4.dp))
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
+            // Political Bias Rating
+            BiasBar(
+                value = data.avgPoliticalBiasRating,
+                color = viewModel.getCategoryColor(data.category),
+                emoji = viewModel.getBiasEmoji(data.avgPoliticalBiasRating),
+                viewModel = viewModel
+            )
+
+            // Detailed Distribution (collapsible)
+            var expanded by remember { mutableStateOf(false) }
+
+            TextButton(
+                onClick = { expanded = !expanded },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
                 Text(
-                    text = "${(data.percentage * 100).toInt()}% of max duration (15 min)",
-                    fontSize = 11.sp,
-                    color = Color(0xFF888888)
+                    text = if (expanded) "Hide Details" else "Show Details",
+                    style = MaterialTheme.typography.bodySmall
                 )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            if (expanded) {
+                DetailedDistribution(data = data)
             }
         }
     }
 }
 
 @Composable
-fun SummaryStats() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
-    ) {
-        Column(
+private fun RatingBar(
+    label: String,
+    value: Double,
+    maxValue: Double,
+    color: Color,
+    emoji: String,
+    viewModel: RatingDistributionViewModel
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "$emoji $label",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "${viewModel.formatRating(value)} / ${maxValue.toInt()}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        LinearProgressIndicator(
+            progress = (value / maxValue).toFloat(),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp)),
+            color = color,
+            trackColor = color.copy(alpha = 0.2f)
+        )
+    }
+}
+
+@Composable
+private fun BiasBar(
+    value: Double,
+    color: Color,
+    emoji: String,
+    viewModel: RatingDistributionViewModel
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Insights,
-                    contentDescription = "Insights",
-                    tint = Color(0xFF1976D2),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "Key Insights",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1976D2)
-                )
-            }
+            Text(
+                text = "$emoji Political Bias",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = viewModel.formatRating(value),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
-            Spacer(Modifier.height(12.dp))
+        // Bias scale: -100 (Left) to +100 (Right), 0 = Center
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color.LightGray)
+        ) {
+            val normalizedPosition = ((value + 100) / 200).coerceIn(0.0, 1.0)
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(normalizedPosition.toFloat())
+                    .background(color)
+            )
+        }
 
-            SummaryItem("📱 Most Active Platform:", "Android (2,847 sessions)")
-            Spacer(Modifier.height(6.dp))
-            SummaryItem("⏱️ Overall Avg Duration:", "10.2 minutes")
-            Spacer(Modifier.height(6.dp))
-            SummaryItem("🔥 Peak Usage Time:", "2:00 PM - 4:00 PM")
-            Spacer(Modifier.height(6.dp))
-            SummaryItem("📊 Total Sessions (Today):", "6,040 sessions")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "⬅️ Left",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+            Text(
+                text = "⚖️",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Right ➡️",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
         }
     }
 }
 
 @Composable
-fun SummaryItem(label: String, value: String) {
+private fun DetailedDistribution(
+    data: com.example.sprint_2_kotlin.model.data.CategoryRatingDistribution
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                RoundedCornerShape(8.dp)
+            )
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "📊 Detailed Breakdown",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Bold
+        )
+
+        Text(
+            text = "Veracity Distribution:",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
+        )
+        DistributionRow("⭐", data.veracity1Star)
+        DistributionRow("⭐⭐", data.veracity2Star)
+        DistributionRow("⭐⭐⭐", data.veracity3Star)
+        DistributionRow("⭐⭐⭐⭐", data.veracity4Star)
+        DistributionRow("⭐⭐⭐⭐⭐", data.veracity5Star)
+
+        Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+        Text(
+            text = "Political Bias Distribution:",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
+        )
+        DistributionRow("⬅️ Left", data.biasLeftCount)
+        DistributionRow("⚖️ Center", data.biasCenterCount)
+        DistributionRow("➡️ Right", data.biasRightCount)
+    }
+}
+
+@Composable
+private fun DistributionRow(label: String, count: Int) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
-            fontSize = 13.sp,
-            color = Color(0xFF1976D2),
-            fontWeight = FontWeight.Medium
+            style = MaterialTheme.typography.bodySmall
         )
         Text(
-            text = value,
-            fontSize = 13.sp,
-            color = Color(0xFF1976D2),
-            fontWeight = FontWeight.Bold
+            text = count.toString(),
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
         )
     }
 }
 
-// Password Dialog
 @Composable
-fun AdminPasswordDialog(
-    onDismiss: () -> Unit,
-    onPasswordCorrect: () -> Unit
-) {
-    var password by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
-    val correctPassword = "admin123"
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
+private fun ErrorCard(message: String, onRetry: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Icon(
-                imageVector = Icons.Default.Lock,
-                contentDescription = "Lock",
-                tint = Color(0xFF1A1A1A),
-                modifier = Modifier.size(32.dp)
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(48.dp)
             )
-        },
-        title = {
             Text(
-                text = "Admin Access Required",
-                fontWeight = FontWeight.Bold
+                text = "Error Loading Data",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer
             )
-        },
-        text = {
-            Column {
-                Text("Enter admin password to view analytics:")
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = {
-                        password = it
-                        showError = false
-                    },
-                    label = { Text("Password") },
-                    singleLine = true,
-                    isError = showError,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (showError) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Incorrect password. Try 'admin123'",
-                        color = Color(0xFFE53935),
-                        fontSize = 12.sp
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (password == correctPassword) {
-                        onPasswordCorrect()
-                    } else {
-                        showError = true
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF1A1A1A)
-                )
-            ) {
-                Text("Access")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+            Button(onClick = onRetry) {
+                Icon(imageVector = Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Retry")
             }
         }
-    )
+    }
+}
+
+@Composable
+private fun AdminLogoutButton(onLogout: () -> Unit) {
+    Button(
+        onClick = onLogout,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(20.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFE53935)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.ExitToApp,
+            contentDescription = "Logout",
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "Logout & Return to Login",
+            fontWeight = FontWeight.Bold
+        )
+    }
 }

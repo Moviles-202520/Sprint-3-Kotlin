@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.model.data.RatingItem
+import com.example.sprint_2_kotlin.model.data.UserProfile
 import com.example.sprint_2_kotlin.model.repository.Repository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,10 @@ class NewsItemDetailViewModel(
 
     private val _newsItem = MutableStateFlow<NewsItem?>(null)
     val newsItem: StateFlow<NewsItem?> = _newsItem.asStateFlow()
+
+    private val _userProfile = MutableStateFlow<UserProfile?>(null)
+
+    val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
 
     private val _ratings = MutableStateFlow<List<RatingItem>>(emptyList())
     val ratings: StateFlow<List<RatingItem>> = _ratings.asStateFlow()
@@ -62,7 +67,19 @@ class NewsItemDetailViewModel(
             }
         }
     }
+
+    fun addComment(userProfileId: Int, comment:String, newsItemId: Int, rating: Double, onSuccess: () -> Unit, onError: (Throwable) -> Unit)
+    {
+        viewModelScope.launch {
+            try {
+             repository.addNewComments(userProfileId,newsItemId, comment = comment, rating = rating, completed = false)
+            } catch (e: Exception) {
+
+            }
+        }
+    }
 }
+
 
 
 
