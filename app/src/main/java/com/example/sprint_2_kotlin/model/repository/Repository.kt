@@ -1,9 +1,11 @@
 package com.example.sprint_2_kotlin.model.repository
 
+import android.icu.text.DecimalFormat
 import android.util.Log
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.model.data.RatingItem
+import com.example.sprint_2_kotlin.model.data.UserProfile
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
@@ -13,7 +15,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.result.PostgrestResult
-
+import java.math.RoundingMode
 
 
 class Repository {
@@ -120,17 +122,30 @@ class Repository {
 
 
         return try {
+            val user = client.auth.currentUserOrNull()!!.id
+            val response = client
+                .from("user_profiles").select(){ filter { eq("user_auth_id",user) } }
+            val profiles = response.decodeList<UserProfile>()
+
+
+            val profile = profiles.first()
+            val userProfileId = profile.user_profile_id //  este es el que usarás en tus inserts
+
+            val scaledValue = rating * 100
+            val truncatedValue = kotlin.math.floor(scaledValue) // Usa floor para truncar, como en la versión de Python (data-camp.com/es/tutorial/python-round-to-two-decimal-places)
+            val ratingf = truncatedValue / 100
+
+
 
             val datos = RatingItem(
-                 newsItemId,
-                 userProfileId,
-                rating,
-                comment,
-                 "02/06/2024",
-                completed
+                  newsItemId,
+                  userProfileId,
+                 ratingf,
+                 comment,
+                 true
             )
 
-            client.from("rating_items").insert(datos){}
+            client.from("rating_items").insert(listOf(datos)){}
 
 
         } catch (e: Exception) {
