@@ -32,6 +32,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+
         setContent {
             Sprint2KotlinTheme {
                 val navController = rememberNavController()

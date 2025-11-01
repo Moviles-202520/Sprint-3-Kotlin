@@ -10,8 +10,8 @@ import androidx.room.RoomDatabase
  * This is the main database configuration with all entities and version
  */
 @Database(
-    entities = [NewsItemEntity::class],
-    version = 1,
+    entities = [NewsItemEntity::class, PendingComment::class],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,6 +20,7 @@ abstract class AppDatabase : RoomDatabase() {
      * Provides access to NewsItemDao for database operations
      */
     abstract fun newsItemDao(): NewsItemDao
+    abstract fun CommentDao(): CommentDao
 
     companion object {
         // Singleton prevents multiple instances of database opening at the same time

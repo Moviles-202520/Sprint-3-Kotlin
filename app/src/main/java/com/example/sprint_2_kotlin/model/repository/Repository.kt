@@ -15,12 +15,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import org.w3c.dom.Comment
+import utils.NetworkMonitor
 
 /**
  * Repository with Cache-First Strategy for News Feed
  * Maintains all existing Supabase functionality
  */
-class Repository(private val context: Context) {
+class Repository(private val context: Context,private val daocomment: CommentDao ) {
 
     // ============================================
     // SUPABASE CLIENT (EXISTING CODE - NO CHANGES)
@@ -35,6 +37,10 @@ class Repository(private val context: Context) {
     }
 
     private val auth = client.auth
+
+   // Monitor to verify internet connection
+    private val networkMonitor = NetworkMonitor(context)
+
 
     // ============================================
     // ROOM DATABASE (NEW - FOR CACHING)
@@ -126,7 +132,7 @@ class Repository(private val context: Context) {
             throw Exception("Failed to load news item with id: $newsItemId")
         }
     }
-
+// Add Comments function with connectivity resistance
     suspend fun addNewComments(
         userProfileId: Int,
         newsItemId: Int,
@@ -134,7 +140,8 @@ class Repository(private val context: Context) {
         rating: Double,
         completed: Boolean
     ): Any {
-        return try {
+        return if (networkMonitor.isConnected.value){ try {
+
             val user = client.auth.currentUserOrNull()!!.id
             val response = client
                 .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
@@ -157,8 +164,60 @@ class Repository(private val context: Context) {
 
             client.from("rating_items").insert(listOf(datos)) {}
         } catch (e: Exception) {
+            daocomment.insert(PendingComment(newsItemId = newsItemId, userProfileId = 0, commentText = comment, reliabilityScore = rating))
             e.printStackTrace()
+        } }else{
+         daocomment.insert(PendingComment(newsItemId = newsItemId, userProfileId = 0, commentText = comment, reliabilityScore = rating))
+
         }
+    }
+    // Function that uploads the comments that have been uploaded without internet connection
+    suspend fun syncPendingComments() {
+
+    try {
+
+        val user = client.auth.currentUserOrNull()!!.id
+        val response = client
+            .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+        val profiles = response.decodeList<UserProfile>()
+
+        val profile = profiles.first()
+        val userProfileIdActual = profile.user_profile_id
+
+
+
+
+        val pending = daocomment.getAll()
+
+
+        for (comment in pending) {
+            try {
+
+                val scaledValue = comment.reliabilityScore * 100
+                val truncatedValue = kotlin.math.floor(scaledValue)
+                val ratingf = truncatedValue / 100
+
+                val datos = RatingItem(
+                    comment.newsItemId,
+                    userProfileIdActual,
+                    ratingf,
+                    comment.commentText,
+                    true
+                )
+
+                client.from("rating_items").insert(listOf(datos)) {}
+
+
+                daocomment.delete(comment)
+            } catch (_: Exception) {
+                // Si falla, sigue pendiente
+            }
+        }
+
+    } catch (_: Exception) {
+
+    }
+
     }
 
     suspend fun updateComment(): Any {
