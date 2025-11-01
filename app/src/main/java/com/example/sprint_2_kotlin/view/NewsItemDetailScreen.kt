@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
@@ -25,6 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.sprint_2_kotlin.viewmodel.NewsItemDetailViewModel
 import okhttp3.internal.userAgent
+import utils.NetworkMonitor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,9 +36,15 @@ fun NewsItemDetailScreen(
     onBackClick: () -> Unit,  // 👈 Add back navigation callback
     viewModel: NewsItemDetailViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val networkMonitor = remember { NetworkMonitor(context) }
     // Load the news item using the ID
     LaunchedEffect(newsItemId) {
         viewModel.loadNewsItemById(newsItemId)
+    }
+    // Launches the listener of the internet connection
+    LaunchedEffect(Unit) {
+        viewModel.startNetworkObserver(networkMonitor)
     }
 
     val currentItem by viewModel.newsItem.collectAsState()

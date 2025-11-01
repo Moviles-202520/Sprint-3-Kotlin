@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.sprint_2_kotlin.model.data.AppDatabase
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.model.repository.Repository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,9 +23,9 @@ import kotlinx.coroutines.launch
 class NewsFeedViewModel(
     application: Application //  CAMBIO: ahora recibe Application
 ) : AndroidViewModel(application) { //  CAMBIO: extiende AndroidViewModel
-
+    private val dao = AppDatabase.getDatabase(application).CommentDao()
     // CAMBIO: Repository ahora recibe context
-    private val repository = Repository(application.applicationContext)
+    private val repository = Repository(application.applicationContext, dao)
 
     // EXISTING: News items state
     private val _newsItems = MutableStateFlow<List<NewsItem>>(emptyList())
