@@ -1,15 +1,25 @@
 package com.example.sprint_2_kotlin.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sprint_2_kotlin.model.repository.Repository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * AuthViewModel - Handles authentication logic
+ *
+ * CHANGE: Now extends AndroidViewModel to get Application context
+ * This is needed because Repository now requires context for Room Database
+ */
 class AuthViewModel(
-    private val repository: Repository = Repository()
-) : ViewModel() {
+    application: Application // OJO CAMBIO: ahora recibe Application
+) : AndroidViewModel(application) { // OJOO CAMBIO: extiende AndroidViewModel
+
+    // IMPORTANTE CAMBIO: Repository ahora recibe context
+    private val repository: Repository = Repository(application.applicationContext)
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState
@@ -55,3 +65,9 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false
 )
+
+
+
+
+
+
