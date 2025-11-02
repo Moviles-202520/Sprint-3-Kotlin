@@ -235,6 +235,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             val response = client.from("news_items")
                 .update({set("total_ratings", newtotalRatings);set("average_reliability_score", newAveragerounded)})
                 {filter { eq("news_item_id",NewsItemId) }}
+            clearCache()
         } catch (e: Exception) {
             e.printStackTrace()
         }
