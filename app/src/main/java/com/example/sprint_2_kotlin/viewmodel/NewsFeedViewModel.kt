@@ -8,9 +8,14 @@ import com.example.sprint_2_kotlin.model.data.AppDatabase
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.model.network.NetworkStatusTracker
 import com.example.sprint_2_kotlin.model.repository.Repository
+import io.ktor.client.utils.EmptyContent
+import io.ktor.http.content.MultiPartData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -78,12 +83,22 @@ class NewsFeedViewModel(
                 Log.d(TAG, "Loading news items - forceRefresh: $forceRefresh")
 
                 // NEW: Observe cached data (reactive)
-                repository.getNewsFeedCached().collect { cachedItems ->
+                val cachedItems = repository.getNewsFeedCached().first().let { cachedItems ->
                     _newsItems.value = cachedItems
                     Log.d(TAG, "News items updated from cache: ${cachedItems.size} items")
 
                     // Update cache status
                     updateCacheStatus()
+                }
+
+                if (_newsItems.value.isEmpty()) {
+                    Log.d(TAG, "Cache is empty — fetching from database...")
+
+                    // 2️⃣ Si no hay datos en caché, cargar desde BD o red
+                    val dbItems = repository.getNewsItems() // tu función personalizada
+                    _newsItems.value = dbItems
+
+
                 }
 
             } catch (e: Exception) {

@@ -141,7 +141,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         completed: Boolean
     ): Any {
         return if (networkMonitor.isConnected.value){ try {
-
+            updateReliabilityScore(newsItemId,rating)
             val user = client.auth.currentUserOrNull()!!.id
             val response = client
                 .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
@@ -219,10 +219,23 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     }
 
     }
-
-    suspend fun updateComment(): Any {
+   //===================================================
+    // Function to update average reliability score
+    //===============================================
+    suspend fun updateReliabilityScore(NewsItemId: Int, rating: Double): Any {
         return try {
-            // TODO: Implement
+            val NewsItem = getNewsItemById(NewsItemId)
+            val totalRatings = NewsItem.total_ratings
+            val averagereliabilityscore = NewsItem.average_reliability_score
+            val newtotalRatings = totalRatings + 1
+            val newAverage = (totalRatings*averagereliabilityscore + rating)/newtotalRatings
+            val scaledValue = newAverage * 100
+            val truncatedValue = kotlin.math.floor(scaledValue)
+            val newAveragerounded = truncatedValue / 100
+            val response = client.from("news_items")
+                .update({set("total_ratings", newtotalRatings);set("average_reliability_score", newAveragerounded)})
+                {filter { eq("news_item_id",NewsItemId) }}
+            clearCache()
         } catch (e: Exception) {
             e.printStackTrace()
         }

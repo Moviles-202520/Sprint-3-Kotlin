@@ -33,7 +33,7 @@ import utils.NetworkMonitor
 fun NewsItemDetailScreen(
     userProfileId: Int,
     newsItemId: Int,  // 👈 Receive ID instead of full object
-    onBackClick: () -> Unit,  // 👈 Add back navigation callback
+    onBackClick: () -> Unit = {},  // 👈 Add back navigation callback
     viewModel: NewsItemDetailViewModel = viewModel()
 ) {
     val context = LocalContext.current
