@@ -143,7 +143,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     ): Int {
          if (networkMonitor.isConnected.value){
              try {
-            updateReliabilityScore(newsItemId,rating)
+
             val user = client.auth.currentUserOrNull()!!.id
             val response = client
                 .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
@@ -165,6 +165,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             )
 
             val answer = client.from("rating_items").insert(listOf(datos)) {}
+                 updateReliabilityScore(newsItemId,rating)
              return 0
             } catch (e: Exception) {
 
@@ -237,6 +238,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
             } catch (_: Exception) {
                 // Si falla, sigue pendiente
+                daocomment.delete(comment)
                 return 0
             }
         }
