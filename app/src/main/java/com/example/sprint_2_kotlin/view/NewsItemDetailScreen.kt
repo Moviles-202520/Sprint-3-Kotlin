@@ -44,7 +44,7 @@ fun NewsItemDetailScreen(
     }
     // Launches the listener of the internet connection
     LaunchedEffect(Unit) {
-        viewModel.startNetworkObserver(networkMonitor)
+        viewModel.startNetworkObserver(networkMonitor,newsItemId)
     }
 
     val currentItem by viewModel.newsItem.collectAsState()
@@ -208,7 +208,8 @@ fun CommentSection(viewModel: NewsItemDetailViewModel = androidx.lifecycle.viewm
         AnimatedVisibility(isExpanded) {
             Card(Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp)) {
+                .padding(top = 12.dp),
+            shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.padding(16.dp)) {
 
 
@@ -234,7 +235,12 @@ fun CommentSection(viewModel: NewsItemDetailViewModel = androidx.lifecycle.viewm
                         value = rating,
                         onValueChange = { rating = it },
                         valueRange = 0f..1f,
-                        steps = 99, // Opcional: 0.1 de incremento
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.secondary,
+                            activeTrackColor = MaterialTheme.colorScheme.secondary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
+                        ),
+                        // steps = 99, // Opcional: 0.01 de incremento
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -253,6 +259,12 @@ fun CommentSection(viewModel: NewsItemDetailViewModel = androidx.lifecycle.viewm
                                     comment = ""
                                 },
                                 onError = { message = "Error al enviar: ${it.message}" },
+                                onWait = {
+                                    message = "Comentario encolado posterior envio"
+                                    isExpanded = false
+                                    name = ""
+                                    comment = ""
+                                },
                                 rating = rating.toDouble()
                             )
                         },
