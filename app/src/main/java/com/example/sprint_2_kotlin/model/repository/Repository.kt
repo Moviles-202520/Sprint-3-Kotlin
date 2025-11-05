@@ -1,5 +1,6 @@
 package com.example.sprint_2_kotlin.model.repository
 
+import android.content.ContentValues
 import android.content.Context
 import android.util.Log
 import com.example.sprint_2_kotlin.model.data.*
@@ -139,9 +140,10 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         comment: String,
         rating: Double,
         completed: Boolean
-    ): Any {
-        return if (networkMonitor.isConnected.value){ try {
-            updateReliabilityScore(newsItemId,rating)
+    ): Int {
+         if (networkMonitor.isConnected.value){
+             try {
+
             val user = client.auth.currentUserOrNull()!!.id
             val response = client
                 .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
@@ -162,19 +164,27 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 true
             )
 
-            client.from("rating_items").insert(listOf(datos)) {}
-        } catch (e: Exception) {
-            daocomment.insert(PendingComment(newsItemId = newsItemId, userProfileId = 0, commentText = comment, reliabilityScore = rating))
+            val answer = client.from("rating_items").insert(listOf(datos)) {}
+                 updateReliabilityScore(newsItemId,rating)
+             return 0
+            } catch (e: Exception) {
+
+                 Log.w(TAG,"Error en la espera")
             e.printStackTrace()
-        } }else{
+             return 1  }
+
+         }else{
          daocomment.insert(PendingComment(newsItemId = newsItemId, userProfileId = 0, commentText = comment, reliabilityScore = rating))
+             Log.w(TAG,"Se activo el encolamiento")
+             return 2
 
         }
     }
     // Function that uploads the comments that have been uploaded without internet connection
-    suspend fun syncPendingComments() {
+    suspend fun syncPendingComments(): Int  {
 
     try {
+        Log.w(TAG,"sincronizando")
 
         val user = client.auth.currentUserOrNull()!!.id
         val response = client
@@ -196,27 +206,48 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 val scaledValue = comment.reliabilityScore * 100
                 val truncatedValue = kotlin.math.floor(scaledValue)
                 val ratingf = truncatedValue / 100
+                val newsItemId = comment.newsItemId
 
                 val datos = RatingItem(
-                    comment.newsItemId,
+                    newsItemId,
                     userProfileIdActual,
                     ratingf,
                     comment.commentText,
                     true
                 )
 
-                client.from("rating_items").insert(listOf(datos)) {}
+                val answer = client.from("rating_items").insert(listOf(datos)) {}
+
+                val newsItem = getNewsItemById(newsItemId)
+                val totalRatings = newsItem.total_ratings
+                val averagereliabilityscore = newsItem.average_reliability_score
+                val newtotalRatings = totalRatings + 1
+                val newAverage = (totalRatings*averagereliabilityscore + ratingf)/newtotalRatings
+                val scaledValue1 = newAverage * 100
+                val truncatedValue1 = kotlin.math.floor(scaledValue1)
+                val newAveragerounded = truncatedValue1 / 100
+                val response = client.from("news_items")
+                    .update({set("total_ratings", newtotalRatings);set("average_reliability_score", newAveragerounded)})
+                    {filter { eq("news_item_id",newsItemId) }}
+
+
+
 
 
                 daocomment.delete(comment)
+
             } catch (_: Exception) {
                 // Si falla, sigue pendiente
+                daocomment.delete(comment)
+                return 0
             }
         }
 
     } catch (_: Exception) {
+        return 2
 
     }
+     return 1
 
     }
    //===================================================
@@ -224,9 +255,9 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     //===============================================
     suspend fun updateReliabilityScore(NewsItemId: Int, rating: Double): Any {
         return try {
-            val NewsItem = getNewsItemById(NewsItemId)
-            val totalRatings = NewsItem.total_ratings
-            val averagereliabilityscore = NewsItem.average_reliability_score
+            val newsItem = getNewsItemById(NewsItemId)
+            val totalRatings = newsItem.total_ratings
+            val averagereliabilityscore = newsItem.average_reliability_score
             val newtotalRatings = totalRatings + 1
             val newAverage = (totalRatings*averagereliabilityscore + rating)/newtotalRatings
             val scaledValue = newAverage * 100
@@ -236,6 +267,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 .update({set("total_ratings", newtotalRatings);set("average_reliability_score", newAveragerounded)})
                 {filter { eq("news_item_id",NewsItemId) }}
             clearCache()
+
         } catch (e: Exception) {
             e.printStackTrace()
         }

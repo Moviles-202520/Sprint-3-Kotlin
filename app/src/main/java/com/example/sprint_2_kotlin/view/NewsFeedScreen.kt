@@ -50,6 +50,7 @@ fun NewsFeedScreen(
     var selectedCategory by remember { mutableStateOf("All") }
     var searchQuery by remember { mutableStateOf("") }
 
+
     Scaffold(
         topBar = {
             Column(
