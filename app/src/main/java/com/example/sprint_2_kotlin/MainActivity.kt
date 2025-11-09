@@ -129,7 +129,10 @@ class MainActivity : FragmentActivity() {
                                 NewsItemDetailScreen(
                                     newsItemId = newsItemId,
                                     userProfileId = userProfileId,
-                                    onBackClick = { navController.popBackStack() }
+                                    onBackClick = {
+                                        navController.navigate(Screen.NewsFeed.route) {
+                                            popUpTo(Screen.NewsFeed.route) { inclusive = true } }
+                                    }
                                 )
                             }
 

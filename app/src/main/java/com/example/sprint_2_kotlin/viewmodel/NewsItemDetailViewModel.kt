@@ -1,6 +1,8 @@
 package com.example.sprint_2_kotlin.viewmodel
 
 import android.app.Application
+import android.content.ContentValues.TAG
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sprint_2_kotlin.model.data.AppDatabase
@@ -9,12 +11,14 @@ import com.example.sprint_2_kotlin.model.data.RatingItem
 import com.example.sprint_2_kotlin.model.data.UserProfile
 import com.example.sprint_2_kotlin.model.network.NetworkStatusTracker
 import com.example.sprint_2_kotlin.model.repository.Repository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import utils.NetworkMonitor
 
 /**
@@ -76,31 +80,54 @@ class NewsItemDetailViewModel(
         }
     }
 
-    fun addComment(userProfileId: Int, comment:String, newsItemId: Int, rating: Double, onSuccess: () -> Unit, onError: (Throwable) -> Unit)
+    fun addComment(userProfileId: Int, comment:String, newsItemId: Int, rating: Double, onSuccess: () -> Unit, onError: (Throwable) -> Unit,onWait: ()-> Unit )
     {
         viewModelScope.launch {
             try {
-             repository.addNewComments(userProfileId,newsItemId, comment = comment, rating = rating, completed = false)
+             val response = repository.addNewComments(userProfileId,newsItemId, comment = comment, rating = rating, completed = false)
+
+             if (response == 0){
+                 withContext(Dispatchers.Main){
+                     onSuccess()
+                     loadNewsItemById(newsItemId)
+                 }
+
+             }else if (response == 2) {
+                 Log.w(TAG,"Se activo el encolamiento")
+                 withContext(Dispatchers.Main){
+                     onWait()
+                 }
+             }
             } catch (e: Exception) {
+                withContext(Dispatchers.Main){
+                    onError(e)
+                }
 
             }
         }
     }
 
-    fun startSync(networkMonitor: NetworkMonitor) {
+    fun startSync(networkMonitor: NetworkMonitor,newsItemid:Int) {
         viewModelScope.launch {
             networkMonitor.isConnected.collect { connected ->
                 _isConnected.value = connected
-                if (connected) repository.syncPendingComments()
+                if (connected) {repository.syncPendingComments()
+                repository.clearCache()
+                loadNewsItemById(newsItemid)}
+
+
+
+
             }
         }
     }
 
-    fun startNetworkObserver(networkMonitor: NetworkMonitor) {
+    fun startNetworkObserver(networkMonitor: NetworkMonitor, newsitemId: Int) {
         viewModelScope.launch {
             networkMonitor.isConnected.collect { connected ->
                 if (connected) {
-                    startSync(networkMonitor)
+                    startSync(networkMonitor,newsitemId)
+
                 }
             }
         }

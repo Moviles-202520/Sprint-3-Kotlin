@@ -1,5 +1,6 @@
 package com.example.sprint_2_kotlin.model.repository
 
+import android.content.ContentValues
 import android.content.Context
 import android.util.Log
 import com.example.sprint_2_kotlin.model.data.*
@@ -139,8 +140,9 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         comment: String,
         rating: Double,
         completed: Boolean
-    ): Any {
-        return if (networkMonitor.isConnected.value){ try {
+    ): Int {
+         if (networkMonitor.isConnected.value){
+             try {
 
             val user = client.auth.currentUserOrNull()!!.id
             val response = client
@@ -162,19 +164,27 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 true
             )
 
-            client.from("rating_items").insert(listOf(datos)) {}
-        } catch (e: Exception) {
-            daocomment.insert(PendingComment(newsItemId = newsItemId, userProfileId = 0, commentText = comment, reliabilityScore = rating))
+            val answer = client.from("rating_items").insert(listOf(datos)) {}
+                 updateReliabilityScore(newsItemId,rating)
+             return 0
+            } catch (e: Exception) {
+
+                 Log.w(TAG,"Error en la espera")
             e.printStackTrace()
-        } }else{
+             return 1  }
+
+         }else{
          daocomment.insert(PendingComment(newsItemId = newsItemId, userProfileId = 0, commentText = comment, reliabilityScore = rating))
+             Log.w(TAG,"Se activo el encolamiento")
+             return 2
 
         }
     }
     // Function that uploads the comments that have been uploaded without internet connection
-    suspend fun syncPendingComments() {
+    suspend fun syncPendingComments(): Int  {
 
     try {
+        Log.w(TAG,"sincronizando")
 
         val user = client.auth.currentUserOrNull()!!.id
         val response = client
@@ -196,33 +206,68 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 val scaledValue = comment.reliabilityScore * 100
                 val truncatedValue = kotlin.math.floor(scaledValue)
                 val ratingf = truncatedValue / 100
+                val newsItemId = comment.newsItemId
 
                 val datos = RatingItem(
-                    comment.newsItemId,
+                    newsItemId,
                     userProfileIdActual,
                     ratingf,
                     comment.commentText,
                     true
                 )
 
-                client.from("rating_items").insert(listOf(datos)) {}
+                val answer = client.from("rating_items").insert(listOf(datos)) {}
+
+                val newsItem = getNewsItemById(newsItemId)
+                val totalRatings = newsItem.total_ratings
+                val averagereliabilityscore = newsItem.average_reliability_score
+                val newtotalRatings = totalRatings + 1
+                val newAverage = (totalRatings*averagereliabilityscore + ratingf)/newtotalRatings
+                val scaledValue1 = newAverage * 100
+                val truncatedValue1 = kotlin.math.floor(scaledValue1)
+                val newAveragerounded = truncatedValue1 / 100
+                val response = client.from("news_items")
+                    .update({set("total_ratings", newtotalRatings);set("average_reliability_score", newAveragerounded)})
+                    {filter { eq("news_item_id",newsItemId) }}
+
+
+
 
 
                 daocomment.delete(comment)
+
             } catch (_: Exception) {
                 // Si falla, sigue pendiente
+                daocomment.delete(comment)
+                return 0
             }
         }
 
     } catch (_: Exception) {
+        return 2
 
     }
+     return 1
 
     }
-
-    suspend fun updateComment(): Any {
+   //===================================================
+    // Function to update average reliability score
+    //===============================================
+    suspend fun updateReliabilityScore(NewsItemId: Int, rating: Double): Any {
         return try {
-            // TODO: Implement
+            val newsItem = getNewsItemById(NewsItemId)
+            val totalRatings = newsItem.total_ratings
+            val averagereliabilityscore = newsItem.average_reliability_score
+            val newtotalRatings = totalRatings + 1
+            val newAverage = (totalRatings*averagereliabilityscore + rating)/newtotalRatings
+            val scaledValue = newAverage * 100
+            val truncatedValue = kotlin.math.floor(scaledValue)
+            val newAveragerounded = truncatedValue / 100
+            val response = client.from("news_items")
+                .update({set("total_ratings", newtotalRatings);set("average_reliability_score", newAveragerounded)})
+                {filter { eq("news_item_id",NewsItemId) }}
+            clearCache()
+
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -435,4 +480,94 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
         return RatingDistributionData(distributions, statistics)
     }
+    // ============================================
+// CATEGORY FILTERING FUNCTIONS
+// ============================================
+
+    /**
+     * Fetch all categories from Supabase
+     */
+    suspend fun getCategories(): List<Category> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Fetching categories from Supabase...")
+            val response = client.postgrest["categories"].select()
+            val categories = response.decodeList<Category>()
+            Log.d(TAG, "Categories loaded: ${categories.size}")
+            categories
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading categories", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Fetch news items filtered by category
+     */
+    suspend fun getNewsItemsByCategory(
+        categoryId: Int,
+        pageSize: Int = 20,
+        startRow: Int = 0
+    ): List<NewsItem> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Fetching news items for category: $categoryId")
+            val response = client.postgrest["news_items"].select {
+                filter {
+                    eq("category_id", categoryId)
+                }
+                range(startRow.toLong(), (startRow + pageSize - 1).toLong())
+            }
+            val items = response.decodeList<NewsItem>()
+            Log.d(TAG, "News items loaded for category $categoryId: ${items.size}")
+            items
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading news items for category $categoryId", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Load news feed with optional category filter (cached version)
+     */
+    suspend fun loadNewsFeedWithFilter(
+        categoryId: Int? = null,
+        forceRefresh: Boolean = false,
+        pageSize: Int = 20,
+        startRow: Int = 0
+    ) = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "loadNewsFeedWithFilter - categoryId: $categoryId, forceRefresh: $forceRefresh")
+
+            if (!forceRefresh && shouldUseCachedData()) {
+                Log.d(TAG, "Using cached data (cache is fresh)")
+                return@withContext
+            }
+
+            Log.d(TAG, "Fetching fresh data from Supabase...")
+
+            val freshNewsItems = if (categoryId != null) {
+                getNewsItemsByCategory(categoryId, pageSize, startRow)
+            } else {
+                getNewsItems(pageSize, startRow)
+            }
+
+            if (freshNewsItems.isEmpty()) {
+                Log.w(TAG, "No data received from Supabase")
+                return@withContext
+            }
+
+            if (forceRefresh) {
+                newsItemDao.deleteAllNewsItems()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
+
+            val entities = freshNewsItems.map { it.toEntity() }
+            newsItemDao.insertAllNewsItems(entities)
+
+            Log.d(TAG, "Successfully cached ${entities.size} news items from Supabase")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading news feed with filter", e)
+        }
+}
+
 }
