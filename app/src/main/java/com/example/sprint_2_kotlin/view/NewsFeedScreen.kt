@@ -48,26 +48,34 @@ fun NewsFeedScreen(
 
     Scaffold(
         topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shadowElevation = 4.dp,
+                color = Color.White
             ) {
-                FeedHeader(cacheStatus = cacheStatus)
-                SearchBar(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it }
-                )
-                CategoryTabsFromSupabase(
-                    categories = categories,
-                    selectedCategory = selectedCategory,
-                    onCategorySelected = { category ->
-                        viewModel.selectCategory(category)
-                    },
-                    onClearFilter = {
-                        viewModel.clearCategoryFilter()
-                    }
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                ) {
+                    FeedHeader(cacheStatus = cacheStatus)
+
+                    SearchBar(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it }
+                    )
+
+                    CategoryTabsFromSupabase(
+                        categories = categories,
+                        selectedCategory = selectedCategory,
+                        onCategorySelected = { category ->
+                            viewModel.selectCategory(category)
+                        },
+                        onClearFilter = {
+                            viewModel.clearCategoryFilter()
+                        }
+                    )
+                }
             }
         },
         bottomBar = {
