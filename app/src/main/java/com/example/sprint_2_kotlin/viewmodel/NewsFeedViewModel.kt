@@ -162,7 +162,7 @@ class NewsFeedViewModel(
             }
         }
 
-        // Cargar datos en caché en paralelo
+        // Cargar datos en caché de manera paralela
         viewModelScope.launch {
             try {
                 val categoryId = _selectedCategory.value?.category_id
