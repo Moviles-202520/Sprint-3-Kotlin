@@ -47,37 +47,6 @@ fun NewsFeedScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     Scaffold(
-        topBar = {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 4.dp,
-                color = Color.White
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White)
-                ) {
-                    FeedHeader(cacheStatus = cacheStatus)
-
-                    SearchBar(
-                        query = searchQuery,
-                        onQueryChange = { searchQuery = it }
-                    )
-
-                    CategoryTabsFromSupabase(
-                        categories = categories,
-                        selectedCategory = selectedCategory,
-                        onCategorySelected = { category ->
-                            viewModel.selectCategory(category)
-                        },
-                        onClearFilter = {
-                            viewModel.clearCategoryFilter()
-                        }
-                    )
-                }
-            }
-        },
         bottomBar = {
             BottomNavigationBar(
                 onNavigateToGuide = onNavigateToGuide,
@@ -147,34 +116,75 @@ fun NewsFeedScreen(
                 LazyColumn(
                     modifier = modifier
                         .fillMaxSize()
-                        .background(Color(0xFFF5F5F5)),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                        .background(Color(0xFFF5F5F5))
                 ) {
+                    // HEADER (DENTRO DEL SCROLL)
                     item {
-                        MisinformationAlert()
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    if (selectedCategory != null) {
-                        item {
-                            FilterInfoCard(
-                                categoryName = selectedCategory!!.name,
-                                itemCount = newsItems.size,
-                                onClearFilter = { viewModel.clearCategoryFilter() }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White)
+                        ) {
+                            FeedHeader(cacheStatus = cacheStatus)
+                            SearchBar(
+                                query = searchQuery,
+                                onQueryChange = { searchQuery = it }
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            CategoryTabsFromSupabase(
+                                categories = categories,
+                                selectedCategory = selectedCategory,
+                                onCategorySelected = { category ->
+                                    viewModel.selectCategory(category)
+                                },
+                                onClearFilter = {
+                                    viewModel.clearCategoryFilter()
+                                }
+                            )
                         }
                     }
 
-                    items(newsItems, key = { it.news_item_id }) { item ->
-                        NewsCard(
-                            item = item,
-                            categories = categories,
-                            onClick = { onNewsItemClick(item.news_item_id) }
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                    // MISINFORMATION ALERT
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            MisinformationAlert()
+                        }
                     }
 
+                    // FILTER INFO
+                    if (selectedCategory != null) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                FilterInfoCard(
+                                    categoryName = selectedCategory!!.name,
+                                    itemCount = newsItems.size,
+                                    onClearFilter = { viewModel.clearCategoryFilter() }
+                                )
+                            }
+                        }
+                    }
+
+                    // NEWS ITEMS
+                    items(newsItems, key = { it.news_item_id }) { item ->
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            NewsCard(
+                                item = item,
+                                categories = categories,
+                                onClick = { onNewsItemClick(item.news_item_id) }
+                            )
+                        }
+                    }
+
+                    // CACHE INFO FOOTER
                     if (newsItems.isNotEmpty()) {
                         item {
                             Text(
@@ -183,7 +193,7 @@ fun NewsFeedScreen(
                                 color = Color(0xFF999999),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 16.dp)
+                                    .padding(horizontal = 16.dp, vertical = 16.dp)
                             )
                         }
                     }
@@ -317,7 +327,7 @@ fun FeedHeader(cacheStatus: String = "") {
         }
 
         Box {
-            IconButton(onClick = { /* TODO */ }) {
+            IconButton(onClick = { }) {
                 Icon(
                     imageVector = Icons.Outlined.Notifications,
                     contentDescription = "Notifications",
@@ -400,7 +410,7 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
         Spacer(Modifier.width(8.dp))
 
         IconButton(
-            onClick = { /* TODO: Filter */ },
+            onClick = { },
             modifier = Modifier
                 .size(48.dp)
                 .background(Color(0xFFF0F0F0), RoundedCornerShape(12.dp))
@@ -467,7 +477,7 @@ fun MisinformationAlert() {
             }
         }
         TextButton(
-            onClick = { /* TODO */ },
+            onClick = { },
             modifier = Modifier.padding(start = 52.dp, bottom = 8.dp)
         ) {
             Text("View details", color = Color(0xFF8B4513), fontSize = 13.sp)
